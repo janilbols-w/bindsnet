@@ -158,6 +158,28 @@ def poisson_loader(data: Union[torch.Tensor, Iterable[torch.Tensor]], time: int,
     for i in range(len(data)):
         yield poisson(datum=data[i], time=time, dt=dt)  # Encode datum as Poisson spike trains.
 
+def poisson_loader_modified(data: Union[torch.Tensor, Iterable[torch.Tensor]], time: int, dt: float = 1.0, rest_time: int = 0 , **kwargs) -> Iterator[torch.Tensor]:
+    # language=rst
+    """
+    Lazily invokes ``bindsnet.encoding.poisson`` to iteratively encode a sequence of data.
+
+    :param data: Tensor of shape ``[n_samples, n_1, ..., n_k]``.
+    :param time: Length of Poisson spike train per input variable.
+    :param dt: Simulation time step.
+    :return: Tensors of shape ``[time, n_1, ..., n_k]`` of Poisson-distributed spikes.
+    """
+    if rest_time<=0:
+        for i in range(len(data)):
+            yield poisson(datum=data[i], time=time, dt=dt)  # Encode datum as Poisson spike trains.
+    else:
+        print('modified poisson loader is triggered!')
+        rest_time = int(rest_time / dt)
+        for i in range(len(data)):
+            datum = data[i]
+            shape, size = datum.shape, datum.numel()
+            rest_spikes = torch.tensor(np.zeros((rest_time,size),dtype=np.uint8))
+            train_spikes = poisson(datum=data[i], time=time, dt=dt)  # Encode datum as Poisson spike trains.
+            yield torch.cat((train_spikes,rest_spikes),0)
 
 def rank_order(datum: torch.Tensor, time: int, dt: float = 1.0, **kwargs) -> torch.Tensor:
     # language=rst
